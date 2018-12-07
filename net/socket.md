@@ -36,6 +36,10 @@ SYSCALL_DEFINE3(socket, int, family, int, type, int, protocol)
 #### [1] sock_create 调用关系
 
 ```C
+ sock_create() - > 
 
+		__sock_create() - > 
+
+				sock_alloc() 
 ```
 
