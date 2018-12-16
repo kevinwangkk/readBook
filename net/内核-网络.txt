@@ -1,0 +1,221 @@
+网卡驱动层  net_device [ register_netdev ( ) ]
+  
+packet  分包
+
+IP 层  IPv4 IPv6
+
+TCP UDP
+
+socket
+
+API
+------------------------------------------------------------------------------------------------------------------------
+数据载体 skb  ( socket buf ) [ 每一层用指针来表示  skb贯穿整个网络协议栈 ]
+	struct sk_buff
+
+
+MTU - Maximum Transmission Unit  帧 一种通信协议的某一层上面所能通过的最大数据包大小（以字节为单位）
+
+------------------------------------------------------------------------------------------------------------------------
+
+register_netdev ( )  //注册网络设备
+
+	alloc_ethrdev () //分配一个netdevice 
+
+netif_rx ( )  //从网卡接收数据
+
+
+	dev_alloc_skb ( )  //分配 struct sk_buff 
+      	        | |
+	skb->protocol  //协议字段 ,  packet的类型  ETH_P_802_3  ...
+		
+		list head ptype_base[] //存放协议类型的链表
+
+		skb->protocol = eth_type_trans( )  //设置协议类型
+
+
+enqueue_to_backlog ( )  //将skb放入队列
+
+	struct softnet_data *sd ;
+	sd -> input_pkt_queue  //将skb放到该队列里
+
+
+
+------------------------------------------------------------------------------------------------------------------------	
+
+struct net_device_ops {  }  // 网卡驱动的具体操作	
+
+struct ethtool_ops { }  //以太网相关的操作
+
+------------------------------------------------------------------------------------------------------------------------
+
+linux RPS
+RPS  网卡流量优化
+
+
+------------------------------------------------------------------------------------------------------------------------
+
+netif_rx ( ) -> 将skb放入队列 /或不放入队列 之后 -> __netif_receive_skb_core ( ) 取skb 进行拆包 -> 到 IP层
+
+//放入队列里的操作
+1 . netif_rx / netif_rx_ni -> netif_rx_internal -> enqueue_to_backlog -> sd -> input_pkt_queue  
+	do_softirq -> net_rx_action() [软中断]-> sd->backlog.poll = process_backlog ->process_backlog()  ->
+	  	__netif_receive_skb() ->  __netif_receive_skb_core ( )
+
+
+//不放入队列里的操作
+2. netif_receive_skb ->  
+	netif_receive_skb_internal -> 
+		__netif_receive_skb() ->  __netif_receive_skb_core ( )
+
+
+
+
+__netif_receive_skb_core ( )  //往IP层去的函数
+
+	dev_add_pack ( struct packet_type  *pt)
+
+	list head ptype_base [ ] //所有协议类型的链表
+
+	pt_prev->func ( )   //进入ip层处理 ip_rcv ( )
+
+Af_inet.c
+Af_inet6.c
+
+ip_rcv ( )  // ipv4的接收函数
+
+	stuct  iphdr  *iph   // IPv4的报头
+
+	skb_rtable ( )  //查路由表 //获取路由信息
+	
+	dst_input ( )  // 进入TCP层
+		ip_local_deliver ( ) 
+		ip_local_deliver_finish ()  //IP层结束	
+			ipprot->handler (skb)  // udp_rcv / tcp_v4_rcv
+
+tcp_v4_rcv()  // tcp层
+		
+	
+
+	struct sock * sk  //结构里面包含 标记了进程 [ tcp_hashinfo ]
+
+	struct tcphdr *th  //tcp的报头
+
+	tcp_v4_do_rcv ( )
+		tcp状态机
+
+tcp状态机
+	tcp_rcv_established ( )	
+		tcp_queue_rcv ( )	
+			sk-> sk_receive_queue
+	
+		tcp_event_data_recv ( )	
+	
+
+
+------------------------------------------------------------------------------------------------------------------------
+
+socket  
+  
+  struct socket {
+
+    struct file *file;   //实现   VFS   read write 
+    struct sock *sk    //处理 tcp 层 协议
+ 	->   ops  //socket ceng ops
+   struct proto_ops *ops  //proto ops 
+}
+
+use  sock_ register ()  // register AF  
+
+struct net_proto_family      // address family  (AF)   地址族
+	AF_INET  //ipv4
+	AF_INET6 	
+
+
+1. sock_create ()  //create 协议相关
+	current->nsproxy->net_ns   (命名空间)  //用于虚拟化
+	
+	sock_alloc( )  // alloc  sock    and  inode 
+	
+
+
+2. sock_map_fd () //  alloc(分配) fd             ->   fd_install ( 
+		 local  fd  进程                 gloal flie  in kernel  
+
+两种fd
+fd 1. FS(文件系统) gloal  fd
+    2.  curret 进程的  fd 
+
+
+
+init detry and  inode 
+	d_instantiate()
+		sock_inode ()
+
+//ipv4.c
+inet_create( )
+	struct inet_protosw *answer   // tcp 层  proto   (tcp /udp)
+		sock->type   //tcp 层 proto (tcp/udp)
+	
+	struct inet_sock *inet	
+		struct sock sk
+		sk_prot_alloc ()  //alloc sk
+
+
+tcp_write_xmit () 
+	__tcp_transmit_skb( )
+
+
+struct tcp_sock
+struct udp_sock
+	struct inet_connetion_sock  //面向连接的sock
+		struct inet_sock   // inet sock 网络层
+			struct sock  //IP层的sock
+				struct sock_common
+					struct proto *skc_prot
+
+sk_prot_alloc( )
+
+syscall connect
+	fd    find  sock 
+	socket -  >  proto
+
+
+
+------------------------------------------------------------------------------------------------------------------------
+
+TCP报文格式
+
+TCP头
+	16位(bit)源端口号  
+	16位目的端口号
+	32位序号 : 由接收端计算机使用
+	32位确认序号
+	4位首位长度 :  最大长度 15*4
+	保留(6位)
+	标志 : 6位 紧急标志、有意义的应答标志、推、重置连接标志、同步序列号标志、完成发送数据标志。按照顺序排列是：URG、ACK、PSH、RST、SYN、FIN。
+	16位窗口大小 : 窗口时时改变(流量控制)
+	16位校验和 : 检验整个的TCP报文段
+	16位紧急指针
+	
+三次握手
+
+IP报文头
+
+------------------------------------------------------------------------------------------------------------------------
+
+------------------------------------------------------------------------------------------------------------------------
+
+------------------------------------------------------------------------------------------------------------------------
+
+------------------------------------------------------------------------------------------------------------------------
+
+
+
+
+
+
+
+
+
+
