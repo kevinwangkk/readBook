@@ -32,3 +32,42 @@ TCP协议的运行可划分为三个阶段：
 
 
 
+​	tcp_v4_rcv()  //tcp协议 接收入口函数 (IP层 到 TCP层)
+
+​		
+
+
+
+滑动窗口
+
+​	tcp_select_window  // 选择一个窗口
+
+​	__tcp_transmit_skb  //发送一个数据包
+
+​	struct tcp_sock
+
+
+
+timer
+
+- struct inet_connection_sock
+
+- 6个定时器
+
+  ​		#define ICSK_TIME_RETRANS	1	/* Retransmit timer */
+  ​		#define ICSK_TIME_DACK		2	/* Delayed ack timer */
+  ​		#define ICSK_TIME_PROBE0	3	/* Zero window probe timer */
+  ​		#define ICSK_TIME_EARLY_RETRANS 4	/* Early retransmit timer */
+  ​		#define ICSK_TIME_LOSS_PROBE	5	/* Tail loss probe timer */
+  ​		#define ICSK_TIME_REO_TIMEOUT	6	/* Reordering timer */	
+
+- **tcp_write_xmit**( )
+
+  - tcp_event_new_data_sent()  //更新定时器  Account for new data that has been sent to the network.
+    - tp->packets_out += tcp_skb_pcount(skb)  //更新
+    - tcp_rearm_rto(sk); //重置重传定时器
+      - if (!tp->packets_out) {    //清空定时器
+        ​		inet_csk_clear_xmit_timer(sk, ICSK_TIME_RETRANS)
+      - inet_csk_reset_xmit_timer(sk, ICSK_TIME_RETRANS, rto, TCP_RTO_MAX);  //重置定时器
+
+- 
