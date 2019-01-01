@@ -70,4 +70,20 @@ timer
         ​		inet_csk_clear_xmit_timer(sk, ICSK_TIME_RETRANS)
       - inet_csk_reset_xmit_timer(sk, ICSK_TIME_RETRANS, rto, TCP_RTO_MAX);  //重置定时器
 
+
+
+
+sk_buff  stocket buffer  
+
+- struct sk_buff_head  使用一个表头来实现套接字缓冲区等待队列
+
+
+
+
+
+网络驱动设备
+
+- struct net_device 网络设备
+- dev_get_by_name()   // 根据设备名查找网络设备 用的 hlist 进行网络设备的存储
+- dev_get_by_index()   // 根据索引号查找网络设备 
 - 
