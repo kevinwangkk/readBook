@@ -90,10 +90,46 @@ ip_rcv ( )  // ipv4的接收函数
 
 	skb_rtable ( )  //查路由表 //获取路由信息
 	
+	接收分组  或是路由转发出去 ip_forward -> ip_decrease_ttl() -> ip_forward_finish() -> ip_forward_opstions -> dst_output
+
+	接收分组
 	dst_input ( )  // 进入TCP层
 		ip_local_deliver ( ) 
+			|||
+		     | 进行分组分片合并工作 |
+			|||
 		ip_local_deliver_finish ()  //IP层结束	
 			ipprot->handler (skb)  // udp_rcv / tcp_v4_rcv
+
+ip层发送分组 (非路由返回情况 ,  还有路由返回 发送分组情况)
+ip_queue_xmit () 
+
+	ip_send_check ()
+
+	netfilter挂钩 : NF_IP_LOCAL_out
+
+	dst_output
+
+		skb->dst->outputs
+
+
+ip层路由返回, 发送分组
+ip_output ()
+	
+	netfilter挂钩 NF_IP_POST_ROUTING
+	
+	ip_finish_output () 
+	
+	是否进行分组分片 - > ip_fragment ()
+
+	ip_finish_output2
+
+		没有足够空间容纳硬件首部?
+			skp_realloc_headroom ()
+
+		dst->neighbour->output () 
+	
+
 
 tcp_v4_rcv()  // tcp层
 		
